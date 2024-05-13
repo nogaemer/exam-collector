@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=0">
-    <title>Title</title>
+    <title>Prüfungen</title>
     <style>
         @media (min-width: 800px) {
             body{
@@ -109,6 +109,20 @@
         #voice {
             width: 100%;
         }
+
+        .source {
+            margin: .5rem 0;
+            padding: 0.5rem 1rem;
+            color: #58a6ff;
+            text-decoration: none;
+            margin-top: 1rem;
+            border-radius: 2px;
+            transition: background 200ms, border-radius 200ms;
+        }
+        .source:hover {
+            border-radius: 10px;
+            background-color: #111827;
+        }
     </style>
 </head>
 <body>
@@ -146,6 +160,10 @@
     </div>
     <div id="result"></div>
     <div id="voice"></div>
+
+    <footer>
+        <a class="source" href="https://github.com/nogaemer/exam-collector" target="_blank">Source</a>
+    </footer>
     <script>
         let containers = [];
 
