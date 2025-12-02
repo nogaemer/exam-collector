@@ -51,7 +51,7 @@ async function getCategoryID(url) {
         if (!response.ok) throw new Error(`categories3 request failed with status ${response.status}`);
         const result = await response.json();
         // load containers and build UI
-        containers = await getContainers(result.id);
+        containers = await getContainers(result.data.id);
         buildTreeYear();
     } catch (error) {
         console.error(error);
