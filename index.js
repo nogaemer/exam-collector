@@ -8,7 +8,7 @@ let download = false;
 
 // TODO: set this to your worker URL, for example:
 // const API_BASE = "https://exam-collector.workers.dev/api";
-const API_BASE = "https://<YOUR_WORKER_SUBDOMAIN>.workers.dev/api";
+const API_BASE = "https://misty-firefly-1329.schwenoldnoah.workers.dev/api";
 
 function selectSubject(elem) {
     let url = elem.id;
