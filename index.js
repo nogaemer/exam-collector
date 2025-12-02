@@ -1,8 +1,14 @@
+// Modified index.js to route all calls through a proxy Worker.
+// Set API_BASE to your Worker URL, e.g. "https://exam-collector.workers.dev/api"
 let containers = [];
 
 let year = null;
 let part = null
 let download = false;
+
+// TODO: set this to your worker URL, for example:
+// const API_BASE = "https://exam-collector.workers.dev/api";
+const API_BASE = "https://<YOUR_WORKER_SUBDOMAIN>.workers.dev/api";
 
 function selectSubject(elem) {
     let url = elem.id;
@@ -29,27 +35,27 @@ async function getCategoryID(url) {
     part = null;
 
     url = url.replace("https://www.schullv.de/", "");
-    url = `https://www.schullv.de/api/v2/categories3?url=${url}&categoryId=undefined&isActive=false`;
+    const requestUrl = `${API_BASE}/v2/categories3?url=${encodeURIComponent(url)}&categoryId=undefined&isActive=false`;
 
     const requestOptions = {
         method: "GET",
         redirect: "follow",
         headers: {
             "Content-Type": "application/json",
-            "Connection": "keep-alive",
             "Accept": "application/json"
         }
     };
 
-    await fetch(url, requestOptions)
-        .then((response) => response.json())
-        .then((result) => {
-            containers = getContainers(result.id).then(() => buildTreeYear());
-            buildTreeYear();
-        })
-        .catch((error) => console.error(error));
-
-
+    try {
+        const response = await fetch(requestUrl, requestOptions);
+        if (!response.ok) throw new Error(`categories3 request failed with status ${response.status}`);
+        const result = await response.json();
+        // load containers and build UI
+        containers = await getContainers(result.id);
+        buildTreeYear();
+    } catch (error) {
+        console.error(error);
+    }
 }
 
 document.getElementById("back").onclick = function() {
@@ -78,14 +84,16 @@ async function buildTreeLink(containerId) {
     let aufgaben = document.createElement("a");
     aufgaben.innerHTML = "Download Aubgaben";
     getDownloadLink(containerId, false)
-        .then((url) => aufgaben.href = url);
+        .then((url) => aufgaben.href = url)
+        .catch(() => aufgaben.href = "#");
     aufgaben.target = "_blank";
     document.getElementById("result").appendChild(aufgaben);
 
     let lösungen = document.createElement("a");
     lösungen.innerHTML = "Download Lösungen";
     getDownloadLink(containerId, true)
-        .then((url) => lösungen.href = url);
+        .then((url) => lösungen.href = url)
+        .catch(() => lösungen.href = "#");
     lösungen.target = "_blank";
     document.getElementById("result").appendChild(lösungen);
 }
@@ -113,7 +121,7 @@ async function buildTree(containerIndex, deepContainerIndex = null) {
         } else {
             p.onclick = function(){
                 buildTreeLink(container.containerId)
-                if (container.subject.name === "Englisch") buildVoice(container.containerId)
+                if (container.subject && container.subject.name === "Englisch") buildVoice(container.containerId)
                 download = true;
             };
         }
@@ -134,75 +142,94 @@ async function buildTreeYear() {
 }
 
 async function getContainers(categoryId) {
-    let url = `https://www.schullv.de/api/v2/categories/${categoryId}/light_containers2?isActive=false`;
+    const url = `${API_BASE}/v2/categories/${encodeURIComponent(categoryId)}/light_containers2?isActive=false`;
     
     const requestOptions = {
         method: "GET",
-        redirect: "follow"
+        redirect: "follow",
+        headers: {
+            "Accept": "application/json"
+        }
     };
 
-    await fetch(url, requestOptions)
-        .then((response) => response.json())
-        .then((result) => {
-            containers = result;
-        })
-        .catch((error) => console.error(error));
+    try {
+        const response = await fetch(url, requestOptions);
+        if (!response.ok) throw new Error(`getContainers failed with status ${response.status}`);
+        const result = await response.json();
+        containers = result;
+    } catch (error) {
+        console.error(error);
+        containers = [];
+    }
 
     return containers;
 }
 
 async function getDownloadLink(containerId, solution) {
-    let url = `https://www.schullv.de/api/v2/containers/${containerId}/labels/${solution ? "PWloesungen" : "PWaufgaben0"}`
-            + `0000000/contents?isApp=false&isTablet=true&userId=null&isActive=false`;
+    const label = solution ? "PWloesungen" : "PWaufgaben0";
+    const url = `${API_BASE}/v2/containers/${encodeURIComponent(containerId)}/labels/${label}0000000/contents?isApp=false&isTablet=true&userId=null&isActive=false`;
 
     let pdfFile;
-    let htmlContent;
 
     const requestOptions = {
         method: "GET",
-        redirect: "follow"
+        redirect: "follow",
+        headers: {
+            "Accept": "application/json"
+        }
     };
 
-    await fetch(url, requestOptions)
-        .then((response) => response.json())
-        .then((result) => {
-            pdfFile = result.pdfFile
-            htmlContent = result.html
-        })
-        .catch((error) => console.error(error));
+    try {
+        const response = await fetch(url, requestOptions);
+        if (!response.ok) throw new Error(`getDownloadLink failed with status ${response.status}`);
+        const result = await response.json();
+        pdfFile = result.pdfFile;
+    } catch (error) {
+        console.error(error);
+        pdfFile = "";
+    }
     return pdfFile;
 }
 
 async function buildVoice(containerId){
-    let url = `https://www.schullv.de/api/v2/containers/${containerId}/labels/PWaufgaben`
-        + `00000000/contents?isApp=false&isTablet=true&userId=null&isActive=false`;
+    const url = `${API_BASE}/v2/containers/${encodeURIComponent(containerId)}/labels/PWaufgaben00000000/contents?isApp=false&isTablet=true&userId=null&isActive=false`;
 
     let audio;
 
     const requestOptions = {
         method: "GET",
-        redirect: "follow"
+        redirect: "follow",
+        headers: {
+            "Accept": "application/json"
+        }
     };
 
-    await fetch(url, requestOptions)
-        .then((response) => response.json())
-        .then((result) => audio = result.html)
-        .catch((error) => console.error(error));
-
     try {
-        document.getElementById("voice").appendChild(
-            new DOMParser()
-                .parseFromString(audio, "text/html")
-                .getElementsByTagName("audio")[0]
-        )
+        const response = await fetch(url, requestOptions);
+        if (!response.ok) throw new Error(`buildVoice failed with status ${response.status}`);
+        const result = await response.json();
+        audio = result.html;
     } catch (error) {
-
+        console.error(error);
+        audio = "";
     }
 
+    try {
+        const parsed = new DOMParser().parseFromString(audio, "text/html");
+        const audioEl = parsed.getElementsByTagName("audio")[0];
+        if (audioEl) {
+            const voiceContainer = document.getElementById("voice");
+            voiceContainer.innerHTML = "";
+            voiceContainer.appendChild(audioEl);
+        }
+    } catch (error) {
+        console.error(error);
+    }
 }
 
-
-window.onload = selectSubject(document.getElementsByClassName("englisch")[0]);
-
-
-
+window.onload = function() {
+    const englishButton = document.getElementsByClassName("englisch")[0];
+    if (englishButton) {
+        selectSubject(englishButton);
+    }
+};
