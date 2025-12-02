@@ -41,7 +41,6 @@ async function getCategoryID(url) {
         method: "GET",
         redirect: "follow",
         headers: {
-            "Content-Type": "application/json",
             "Accept": "application/json"
         }
     };
@@ -156,7 +155,7 @@ async function getContainers(categoryId) {
         const response = await fetch(url, requestOptions);
         if (!response.ok) throw new Error(`getContainers failed with status ${response.status}`);
         const result = await response.json();
-        containers = result;
+        containers = result.data;
     } catch (error) {
         console.error(error);
         containers = [];
@@ -183,7 +182,7 @@ async function getDownloadLink(containerId, solution) {
         const response = await fetch(url, requestOptions);
         if (!response.ok) throw new Error(`getDownloadLink failed with status ${response.status}`);
         const result = await response.json();
-        pdfFile = result.pdfFile;
+        pdfFile = result.data.pdfFile;
     } catch (error) {
         console.error(error);
         pdfFile = "";
@@ -208,7 +207,7 @@ async function buildVoice(containerId){
         const response = await fetch(url, requestOptions);
         if (!response.ok) throw new Error(`buildVoice failed with status ${response.status}`);
         const result = await response.json();
-        audio = result.html;
+        audio = result.data.html;
     } catch (error) {
         console.error(error);
         audio = "";
